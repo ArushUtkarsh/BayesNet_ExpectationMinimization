@@ -302,8 +302,9 @@ void expectation(network& Alarm, vector<pair<vector<string>,float>>& data, vecto
                     cptSizePrefix[k] = cptSizePrefix[k+1]*numValues;
                 }
                 int location;
-                if(name == it->second.get_name())
+                if(name == it->second.get_name()){
                     location = j;
+                }
                 else{
                     vector<string> values = it->second.get_values();
                     for(int k=0;k<values.size();k++){
@@ -346,33 +347,36 @@ void expectation(network& Alarm, vector<pair<vector<string>,float>>& data, vecto
 void maximization(network& Alarm, vector<pair<vector<string>,float>> data, vector<int> unknownIndex, vector<vector<double>> unknownDistribution){
     int variables = Alarm.netSize();
     cout<<variables<<endl;
+    cout<<"B1"<<endl;
     for(int i=0;i<variables;i++){
-        cout<<i<<endl;
+        cout<<"C1"<<endl;
         string name = Alarm.indexToName[i];
         int nvalues = Alarm.Pres_Graph[name].get_nvalues();
         vector<string> Parents = Alarm.Pres_Graph[name].get_Parents();
         vector<int> ParentIndices;
         int numParents = Parents.size();
+        cout<<"C2"<<endl;
         for(int j=0;j<numParents;j++){
             ParentIndices.push_back(Alarm.Pres_Graph[Parents[j]].get_index());
         }
-        cout<<"B"<<endl;
         sort(ParentIndices.begin(),ParentIndices.end());
         vector<int> cptSizePrefix(numParents,nvalues);
+        cout<<"myvalues = "<<nvalues<<endl;
+        cout<<"C3"<<endl;
         for(int j=numParents-2;j>=0;j--){
             int numValues = Alarm.Pres_Graph[Parents[j+1]].get_nvalues();
+            cout<<"parent value = "<<numValues<<endl;
             cptSizePrefix[j] = cptSizePrefix[j+1]*numValues;
         }
-        cout<<"C"<<endl;
         long size;
         if(numParents>0)
             size = Alarm.Pres_Graph[Parents[0]].get_nvalues()*cptSizePrefix[0];
         else
             size = nvalues;
+        cout<<"Size = "<<size<<endl;
         vector<double> numEvents(size,0);
-        cout<<data.size()<<endl;
+        cout<<"A1"<<endl;
         for(int j=0;j<data.size();j++){
-            cout<<j<<endl;
             long location = 0;
             bool flag = false;
             for(int k=0;k<numParents;k++){
@@ -388,17 +392,14 @@ void maximization(network& Alarm, vector<pair<vector<string>,float>> data, vecto
                 else
                     flag = true;
             }
-            cout<<"D1"<<endl;
             if(i != unknownIndex[j]){
                 vector<string> values = Alarm.Pres_Graph[name].get_values();
-                cout<<"E1"<<endl;
                 for(int l=0;l<values.size();l++){
                     if(values[l] == data[j].first[i]){
                         location += l;
                         break;
                     }
                 }
-                cout<<"E2"<<endl;
             }
             else
                 flag = true;
@@ -408,10 +409,15 @@ void maximization(network& Alarm, vector<pair<vector<string>,float>> data, vecto
                 cout<<"F1"<<endl;
                 for(int k=0;k<numParents;k++){
                     if (unknownIndex[j] == ParentIndices[k]){
-                        int nvalues = Alarm.Pres_Graph[Alarm.indexToName[ParentIndices[k]]].get_nvalues();
+                        int numvalues = Alarm.Pres_Graph[Alarm.indexToName[ParentIndices[k]]].get_nvalues();
                         cout<<"H1"<<endl;
-                        for(int l=0;l<nvalues;l++){
-                            long loc = location+l*cptSizePrefix[ParentIndices[k]];
+                        for(int l=0;l<numvalues;l++){
+                            cout<<"CPT: ";
+                            for(int t=0;t<cptSizePrefix.size();t++)
+                                cout<<cptSizePrefix[t]<<" ";
+                            cout<<endl;
+                            long loc = location+l*cptSizePrefix[k];
+                            cout<<"parentindex = "<<ParentIndices[k]<<", Loc: "<<loc<<" "<<numEvents.size()<<endl;
                             numEvents[loc]+=unknownDistribution[j][l];
                         }
                         cout<<"H2"<<endl;
@@ -420,31 +426,37 @@ void maximization(network& Alarm, vector<pair<vector<string>,float>> data, vecto
                 }
                 cout<<"F2"<<endl;
                 if(i == unknownIndex[j]){
-                    int nvalues = Alarm.Pres_Graph[name].get_nvalues();
+                    int numvalues = Alarm.Pres_Graph[name].get_nvalues();
                     cout<<"G1"<<endl;
-                    for(int l=0;l<nvalues;l++){
+                    for(int l=0;l<numvalues;l++){
                         long loc = location+l;
                         numEvents[loc]+=unknownDistribution[j][l];
                     }
                     cout<<"G2"<<endl;
                 }
             }
-            cout<<"D2"<<endl;
         }
-        cout<<"E"<<endl;
+        cout<<"A2"<<endl;
         double sum = 0;
         vector<float> CPT(numEvents.size(),0);
+        cout<<"A3"<<endl;
         for(int j=0;j<numEvents.size();j++){
             sum+=numEvents[j];
             if (j%nvalues==nvalues-1){
                 for(int k=j-nvalues+1;k<=j;k++){
                     CPT[k] = numEvents[k]/sum;
                 }
+                sum = 0;
             }
         }
-        cout<<"F"<<endl;
+        cout<<"A4"<<endl;
+        cout<<name<<endl;
+        vector<float> temp = Alarm.Pres_Graph[name].get_CPT();
+        cout<<"mycptsize = "<<CPT.size()<<", actual = "<<temp.size()<<endl;
+        cout<<"A5"<<endl;
         Alarm.Pres_Graph[name].set_CPT(CPT);
     }
+    cout<<"B2"<<endl;
 }
 
 
@@ -468,16 +480,16 @@ int main()
             if (line[i] == '\"'){
                 mode = !mode;
                 if (mode == false){
+                    val+="\"";
                     vals.push_back(val);
-                    if (val=="?")
+                    if (val=="\"?\"")
                         unknownIndex.push_back(count);
                     val = "";
                     count++;
                 }
             }
             if (mode == true){
-                if(line[i]!='\"')
-                    val+=line[i];
+                val+=line[i];
             }
         }
         data.push_back(make_pair(vals,1));
@@ -500,7 +512,6 @@ int main()
 
     for(int i=0;i<1;i++){
         expectation(Alarm, data, unknownIndex, unknownDistribution);
-        cout<<"A"<<endl;
         maximization(Alarm, data, unknownIndex, unknownDistribution);
     }
     // for(int i=0;i<unknownDistribution.size();i++){
