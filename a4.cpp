@@ -166,18 +166,20 @@ public:
 
 };
 
-network read_network()
+network read_network(string file)
 {
 	network Alarm;
 	string line;
 	int find=0;
-  	ifstream myfile("alarm.bif"); 
+  	ifstream myfile(file); 
   	string temp;
   	string name;
   	vector<string> values;
   	
     if (myfile.is_open())
     {
+        bool flag = true;
+        ofstream outfile("solved_alarm.bif");
     	while (! myfile.eof() )
     	{
     		stringstream ss;
@@ -190,9 +192,10 @@ network read_network()
      		
      		if(temp.compare("variable")==0)
      		{
-                    
+                    outfile<<line<<endl;
      				ss>>name;
      				getline (myfile,line);
+                    outfile<<line<<endl;
                    
      				stringstream ss2;
      				ss2.str(line);
@@ -219,7 +222,7 @@ network read_network()
      		}
      		else if(temp.compare("probability")==0)
      		{
-                    
+                    flag = false;
      				ss>>temp;
      				ss>>temp;
      				
@@ -268,7 +271,10 @@ network read_network()
      		}
             else
             {
-                
+                if(flag==true)
+                    outfile<<line<<endl;
+                if(flag == false && line.compare("\"")==0)
+                    flag = true;
             }
      		
      		
@@ -287,24 +293,25 @@ network read_network()
 void print_bif(network &Alarm){
 
     ofstream outfile;
-    outfile.open("solved_alarm.bif");
-    for(auto iter = Alarm.Pres_Graph.begin(); iter != Alarm.Pres_Graph.end(); iter++){
-        outfile << "probability (  " << iter->first;
-        for(string  &i : iter->second.get_Parents()){
-            outfile << "  " << i;
+    outfile.open("solved_alarm.bif", ios::app);
+    for(int i=0;i<Alarm.netSize();i++){
+        Graph_Node node = Alarm.Pres_Graph[Alarm.indexToName[i]];
+        outfile << "probability (  " << node.get_name();
+        for(string  &j : node.get_Parents()){
+            outfile << "  " << j;
         }
-        vector<float> cpt =iter->second.get_CPT();
-        outfile << " ) { //" << (iter->second.get_Parents().size()+1) << " variable(s) and " <<  cpt.size() << " values\n";
+        vector<float> cpt =node.get_CPT();
+        outfile << " ) { //" << (node.get_Parents().size()+1) << " variable(s) and " <<  cpt.size() << " values\n";
         outfile << "\ttable ";
-        map<long,long> temp = iter->second.jugaad;
+        map<long,long> temp = node.jugaad;
         // cout<<"jugaad size = "<<iter->second.jugaad.size()<<endl;
         // for(int i=0;i<iter->second.jugaad.size();i++){
         //     cout<<"i, jugaad[i] = "<<i<<" "<<iter->second.jugaad[i]<<endl;
         // }
-        for(int i =0; i < cpt.size(); i++){
+        for(int j =0; j < cpt.size(); j++){
             //cout<<i;
             // cout<<"i, temp[i] = "<<i<<" "<<temp[i]<<endl;
-            outfile << fixed<< setprecision(4)<< cpt[temp[i]] << " ";
+            outfile << fixed<< setprecision(4)<< cpt[temp[j]] << " ";
             //outfile << fixed<< setprecision(4)<< cpt[i] << " ";
         }
         outfile << ";" << endl << "}\n";
@@ -361,7 +368,7 @@ void expectation(network& Alarm, vector<pair<vector<string>,float>>& data, vecto
                 }
                 vector<float> cpt = it->second.get_CPT();
                 double val = cpt[location];
-                
+
                 //cout<<cpt.size()<<" location : "<<location<<" val: "<<val<<endl;
                 prob*=val;
                 // cout<<prob<<" ";
@@ -513,10 +520,10 @@ void maximization(network& Alarm, vector<pair<vector<string>,float>> data, vecto
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
 	network Alarm;
-	Alarm=read_network();
+	Alarm=read_network(argv[1]);
     int variables = Alarm.netSize();
     vector<pair<vector<string>,float>> data;
     vector<int> unknownIndex;
@@ -548,7 +555,7 @@ int main()
     }
 
 
-    ifstream dataFile("records.dat", ios::in);
+    ifstream dataFile(argv[2], ios::in);
 
     string line;
     bool mode = false;
