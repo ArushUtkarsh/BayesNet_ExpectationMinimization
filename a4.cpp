@@ -9,6 +9,7 @@
 #include <cmath>
 #include <algorithm>
 #include <iomanip>
+#include <chrono>
 
 
 // Format checker just assumes you have Alarm.bif and Solved_Alarm.bif (your file) in current directory
@@ -522,6 +523,7 @@ void maximization(network& Alarm, vector<pair<vector<string>,float>> data, vecto
 
 int main(int argc, char** argv)
 {
+    auto start = chrono::high_resolution_clock::now();
 	network Alarm;
 	Alarm=read_network(argv[1]);
     int variables = Alarm.netSize();
@@ -631,6 +633,10 @@ int main(int argc, char** argv)
         }
         cout<<"diff: "<<diff<<endl;
         if(diff<tolerance)break;
+        auto currTime = chrono::high_resolution_clock::now();
+        auto duration = chrono::duration_cast<chrono::seconds>(currTime - start);
+        if(duration.count() > 110)
+            break;
     }
     // for(int i=0;i<unknownDistribution.size();i++){
     //     for(int j=0;j<unknownDistribution[i].size();j++)
