@@ -27,6 +27,7 @@ private:
 	vector<float> CPT; // conditional probability table as a 1-d array . Look for BIF format to understand its meaning
 
 public:
+    map<long,long> jugaad;
 	// Constructor- a node is initialised with its name and its categories
     Graph_Node(){
         Node_Name = "";
@@ -295,9 +296,16 @@ void print_bif(network &Alarm){
         vector<float> cpt =iter->second.get_CPT();
         outfile << " ) { //" << (iter->second.get_Parents().size()+1) << " variable(s) and " <<  cpt.size() << " values\n";
         outfile << "\ttable ";
-        for(float &i : cpt){
+        map<long,long> temp = iter->second.jugaad;
+        // cout<<"jugaad size = "<<iter->second.jugaad.size()<<endl;
+        // for(int i=0;i<iter->second.jugaad.size();i++){
+        //     cout<<"i, jugaad[i] = "<<i<<" "<<iter->second.jugaad[i]<<endl;
+        // }
+        for(int i =0; i < cpt.size(); i++){
             //cout<<i;
-            outfile << fixed<< setprecision(4)<< i << " ";
+            // cout<<"i, temp[i] = "<<i<<" "<<temp[i]<<endl;
+            // outfile << fixed<< setprecision(4)<< cpt[temp[i]] << " ";
+            outfile << fixed<< setprecision(4)<< cpt[i] << " ";
         }
         outfile << ";" << endl << "}\n";
     }
@@ -382,7 +390,6 @@ void maximization(network& Alarm, vector<pair<vector<string>,float>> data, vecto
         for(int j=0;j<numParents;j++){
             ParentIndices.push_back(Alarm.Pres_Graph[Parents[j]].get_index());
         }
-        //sort(ParentIndices.begin(),ParentIndices.end());
         vector<int> cptSizePrefix(numParents,nvalues);
         //cout<<"myvalues = "<<nvalues<<endl;
         //cout<<"C3"<<endl;
@@ -505,6 +512,34 @@ int main()
     int variables = Alarm.netSize();
     vector<pair<vector<string>,float>> data;
     vector<int> unknownIndex;
+    for(auto &it: Alarm.Pres_Graph){
+        vector<string> Parents = it.second.get_Parents();
+        long nvalues = it.second.get_nvalues();
+        long size = nvalues;
+        for(int i=0;i<Parents.size();i++){
+            long numValues = Alarm.Pres_Graph[Parents[i]].get_nvalues();
+            size*=numValues;
+        }
+        long initIndex = 0;  //go from 0 to Pi(numValues of parents)
+        for(;initIndex<size;initIndex+=nvalues){
+            for(int j=0;j<nvalues;j++){
+                long newIndex = ((initIndex)/nvalues)+j*(size/nvalues);
+                it.second.jugaad[initIndex+j] = newIndex;
+            }
+        }
+
+        // if(it.second.get_name().compare("\"Catechol\"")==0){
+        //     for(int i=0;i<it.second.jugaad.size();i++){
+        //         cout<<"i, jugaad[i] = "<<i<<" "<<it.second.jugaad[i]<<endl;
+        //     }
+        // }
+
+        // for(int i=0;i<it.second.jugaad.size();i++){
+        //     cout<<"i, jugaad[i] = "<<i<<" "<<it.second.jugaad[i]<<endl;
+        // }
+    }
+
+
     ifstream dataFile("records.dat", ios::in);
 
     string line;
