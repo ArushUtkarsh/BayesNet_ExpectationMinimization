@@ -304,8 +304,8 @@ void print_bif(network &Alarm){
         for(int i =0; i < cpt.size(); i++){
             //cout<<i;
             // cout<<"i, temp[i] = "<<i<<" "<<temp[i]<<endl;
-            // outfile << fixed<< setprecision(4)<< cpt[temp[i]] << " ";
-            outfile << fixed<< setprecision(4)<< cpt[i] << " ";
+            outfile << fixed<< setprecision(4)<< cpt[temp[i]] << " ";
+            //outfile << fixed<< setprecision(4)<< cpt[i] << " ";
         }
         outfile << ";" << endl << "}\n";
     }
@@ -361,6 +361,14 @@ void expectation(network& Alarm, vector<pair<vector<string>,float>>& data, vecto
                 }
                 vector<float> cpt = it->second.get_CPT();
                 double val = cpt[location];
+
+                // Apply Laplace smoothing for missing values ////////////Smmooooothheeeee!
+                int total_possible_values = it->second.get_nvalues();
+                int count_possible_values = it->second.get_values().size();
+                double alpha = 1.0; // Laplace smoothing parameter (add-one)
+                if(val==0 || !val){
+                    val = (alpha) / (count_possible_values + alpha * dataRows);
+                }
                 //cout<<cpt.size()<<" location : "<<location<<" val: "<<val<<endl;
                 prob*=val;
                 // cout<<prob<<" ";
@@ -370,8 +378,9 @@ void expectation(network& Alarm, vector<pair<vector<string>,float>>& data, vecto
             unknownDistribution[i][j] = prob;
             sum+=prob;
         }
-        for(int j=0;j<nvalues;j++)
+        for(int j=0;j<nvalues;j++){
             unknownDistribution[i][j]/=sum;
+        }
     }
 }
 
@@ -490,6 +499,8 @@ void maximization(network& Alarm, vector<pair<vector<string>,float>> data, vecto
                 //cout<<"Sum is: "<<sum<<endl;
                 for(int k=j-nvalues+1;k<=j;k++){
                     CPT[k] = numEvents[k]/sum;
+                    //if(!CPT[k])CPT[k]= 1.0/(nvalues+1+CPT.size());  /////////////Smmooooothheeeee!
+                    //if(!CPT[k])cout<<"________LODA_________";
                 }
                 sum = 0;
             }
@@ -524,11 +535,11 @@ int main()
         for(;initIndex<size;initIndex+=nvalues){
             for(int j=0;j<nvalues;j++){
                 long newIndex = ((initIndex)/nvalues)+j*(size/nvalues);
-                it.second.jugaad[initIndex+j] = newIndex;
+                it.second.jugaad[newIndex] = initIndex+j;
             }
         }
 
-        // if(it.second.get_name().compare("\"Catechol\"")==0){
+        // if(it.second.get_name().compare("\"ArtCO2\"")==0){
         //     for(int i=0;i<it.second.jugaad.size();i++){
         //         cout<<"i, jugaad[i] = "<<i<<" "<<it.second.jugaad[i]<<endl;
         //     }
@@ -574,6 +585,7 @@ int main()
         vector<double> temp(nvalues,0);
         unknownDistribution.push_back(temp);
     }
+    int numCptValues=0;
 
     for(auto it = Alarm.Pres_Graph.begin(); it != Alarm.Pres_Graph.end(); it++){
         vector<string> parents = it->second.get_Parents();
@@ -583,6 +595,7 @@ int main()
         }
         int values = it->second.get_nvalues();
         tableSize*=values;
+        numCptValues+=tableSize;
         vector<float> initCPT(tableSize, 1.0/values);
         it->second.set_CPT(initCPT);
     }
@@ -592,10 +605,28 @@ int main()
     //     cout<<it<<" ";
     // }
     // cout<<endl;
-
-    for(int i=0;i<10;i++){
+    vector<float> prev(numCptValues, 0.0);
+    float tolerance = 1e-5;
+    float diff;
+    int t;
+    for(int i=0;i<1;i++){
+        diff=0, t=0;
         expectation(Alarm, data, unknownIndex, unknownDistribution);
         maximization(Alarm, data, unknownIndex, unknownDistribution);
+        
+        for(auto iter = Alarm.Pres_Graph.begin(); iter != Alarm.Pres_Graph.end(); iter++){
+            vector<float> cpt =iter->second.get_CPT();
+            cout<<"HELLO:\n";
+            for(float f : cpt){
+                cout<<"diff: "<<diff<<" + abs("<<prev[t]<<" - "<<f<<") = ";
+                diff += abs(prev[t] - f);
+                prev[t]=f;
+                t++;
+                cout<<diff<<endl;
+            }
+        }
+        cout<<"diff: "<<diff<<endl;
+        if(diff<tolerance)break;
     }
     // for(int i=0;i<unknownDistribution.size();i++){
     //     for(int j=0;j<unknownDistribution[i].size();j++)
@@ -603,8 +634,4 @@ int main()
     //     cout<<endl;
     // }
     print_bif(Alarm);
-    
-// Example: to do something
-	cout<<"Perfect! Hurrah! \n";
-	
 }
