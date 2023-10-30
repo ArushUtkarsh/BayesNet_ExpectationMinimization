@@ -361,14 +361,7 @@ void expectation(network& Alarm, vector<pair<vector<string>,float>>& data, vecto
                 }
                 vector<float> cpt = it->second.get_CPT();
                 double val = cpt[location];
-
-                // Apply Laplace smoothing for missing values ////////////Smmooooothheeeee!
-                int total_possible_values = it->second.get_nvalues();
-                int count_possible_values = it->second.get_values().size();
-                double alpha = 1.0; // Laplace smoothing parameter (add-one)
-                if(val==0 || !val){
-                    val = (alpha) / (count_possible_values + alpha * dataRows);
-                }
+                
                 //cout<<cpt.size()<<" location : "<<location<<" val: "<<val<<endl;
                 prob*=val;
                 // cout<<prob<<" ";
@@ -490,6 +483,10 @@ void maximization(network& Alarm, vector<pair<vector<string>,float>> data, vecto
             }
         }
         //cout<<"A2"<<endl;
+        //Laplace/+1 Smoothing
+        for(int j=0;j<numEvents.size();j++){
+            numEvents[j]++;
+        }
         double sum = 0;
         vector<float> CPT(numEvents.size(),0);
         //cout<<"A3"<<endl;
@@ -609,7 +606,7 @@ int main()
     float tolerance = 1e-5;
     float diff;
     int t;
-    for(int i=0;i<1;i++){
+    for(int i=0;;i++){
         diff=0, t=0;
         expectation(Alarm, data, unknownIndex, unknownDistribution);
         maximization(Alarm, data, unknownIndex, unknownDistribution);
