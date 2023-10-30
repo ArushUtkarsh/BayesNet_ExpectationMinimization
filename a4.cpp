@@ -380,7 +380,6 @@ void expectation(network& Alarm, vector<pair<vector<string>,float>>& data, map<l
 
 void maximization(network& Alarm, vector<pair<vector<string>,float>> data, map<long,long> unknownIndex, vector<vector<double>> unknownDistribution){
     int variables = Alarm.netSize();
-    cout<<variables<<endl;
     for(int i=0;i<variables;i++){
         string name = Alarm.indexToName[i];
         int nvalues = Alarm.Pres_Graph[name].get_nvalues();
@@ -573,16 +572,12 @@ int main(int argc, char** argv)
         
         for(auto iter = Alarm.Pres_Graph.begin(); iter != Alarm.Pres_Graph.end(); iter++){
             vector<float> cpt =iter->second.get_CPT();
-            cout<<"HELLO:\n";
             for(float f : cpt){
-                cout<<"diff: "<<diff<<" + abs("<<prev[t]<<" - "<<f<<") = ";
                 diff += abs(prev[t] - f);
                 prev[t]=f;
                 t++;
-                cout<<diff<<endl;
             }
         }
-        cout<<"diff: "<<diff<<endl;
         if(diff<tolerance)break;
         auto currTime = chrono::high_resolution_clock::now();
         auto duration = chrono::duration_cast<chrono::seconds>(currTime - start);
